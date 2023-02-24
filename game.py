@@ -26,7 +26,6 @@ class User:
         self.prompt = self.get_sentence()
         self.input = ''
         self.start_time = 0
-        self.time_taken = 0
         self.timer_started = False
         self.end = False
         self.accuracy = 0
@@ -38,6 +37,9 @@ class User:
         dat = random.choices(data, k=10)
         return ' '.join(dat)
 
+    def set_new_sentence(self):
+        self.prompt = self.get_sentence()
+
 
 def draw_text(surface, message, y_cord, font_size, color):
     font = pygame.font.Font(None, font_size)
@@ -47,16 +49,14 @@ def draw_text(surface, message, y_cord, font_size, color):
 
 
 def draw_surface(surface):
-    surface.fill((0, 0, 0))
+    surface.fill((90, 90, 255))
     land.render(surface, world_x)
     draw_text(surface, 'League of Typing', 100, 60, TITLE_COLOR)
-    if user.prompt:
-        if len(user.prompt) >= 60:
-            lis = user.prompt.split()
-            w1 = ' '.join(lis[:len(lis) // 2])
-            w2 = ' '.join(lis[len(lis) // 2:])
-            draw_text(surface, w1, 200, 20, PROMPT_COLOR)
-            draw_text(surface, w2, 240, 20, PROMPT_COLOR)
+    lis = user.prompt.split()       # convert words as a list
+    w1 = ' '.join(lis[:len(lis) // 2])
+    w2 = ' '.join(lis[len(lis) // 2:])
+    draw_text(surface, w1, 200, 20, PROMPT_COLOR)
+    draw_text(surface, w2, 240, 20, PROMPT_COLOR)
     surface.fill((0, 0, 0), (50, 300, 700, 80))
     pygame.draw.rect(surface, RECT_COLOR, (50, 300, 700, 80), 2)
     if user.input:
@@ -96,7 +96,7 @@ def show_result():
         user.accuracy = count / len(user.prompt) * 100
         user.wpm = len(user.input) * 60 / (5 * user.timer_taken)
         user.end = True
-        user.result = f'Time : {round(user.time_taken)} || Accuracy : {round(user.accuracy)} || WPM : {round(user.wpm)}'
+        user.result = f'Time : {round(time.time()-user.start_time)} || Accuracy : {round(user.accuracy)} || WPM : {round(user.wpm)}'
         print(user.result)
 
 
@@ -127,7 +127,7 @@ while running:
                 if event.key == pygame.K_RETURN:
                     show_result()
                 elif event.key == pygame.K_BACKSPACE:
-                    user.input = user.input[-1]
+                    user.input = user.input[:-1]
                 elif event.key == pygame.K_RIGHT:
                     # debug
                     world_x += 50
@@ -146,4 +146,3 @@ while running:
                     user.input += event.unicode
                 except:
                     pass
-    pygame.display.update()
