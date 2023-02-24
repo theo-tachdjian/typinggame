@@ -5,16 +5,14 @@ import random
 import time
 
 import words
+from land_object import LandObject
 
 WIDTH, HEIGHT = 800, 600
 FPS = 30
 
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Typing Test')
+pygame.display.set_caption('Typing Game')
 pygame.init()
-
-# background = pygame.image.load(trouverunbackgroundutilisable)
-# background = pygame.transform.scale(background, (WIDTH,HEIGHT))
 
 TITLE_COLOR = (249, 231, 159)
 PROMPT_COLOR = (88, 214, 141)
@@ -43,14 +41,14 @@ class User:
 
 def draw_text(surface, message, y_cord, font_size, color):
     font = pygame.font.Font(None, font_size)
-    text = font.render(message, 1, color)
+    text = font.render(message, True, color)
     text_rect = text.get_rect(center=(WIDTH / 2, y_cord))
     surface.blit(text, text_rect)
 
 
 def draw_surface(surface):
     surface.fill((0, 0, 0))
-    # surface.blit(background(0,0))
+    land.render(surface, world_x)
     draw_text(surface, 'League of Typing', 100, 60, TITLE_COLOR)
     if user.prompt:
         if len(user.prompt) >= 60:
@@ -105,6 +103,10 @@ def show_result():
 running = True
 clock = pygame.time.Clock()
 user = User()
+
+land = LandObject()
+world_x = 0
+
 while running:
     clock.tick(FPS)
     draw_surface(WIN)
@@ -126,6 +128,12 @@ while running:
                     show_result()
                 elif event.key == pygame.K_BACKSPACE:
                     user.input = user.input[-1]
+                elif event.key == pygame.K_RIGHT:
+                    # debug
+                    world_x += 50
+                elif event.key == pygame.K_LEFT:
+                    # debug
+                    world_x -= 50
                 else:
                     try:
                         user.input += event.unicode
