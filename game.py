@@ -11,7 +11,8 @@ WIDTH, HEIGHT = 800, 600
 FPS = 30
 
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Typing Game')
+pygame.display.set_caption('League of Typing')
+pygame.display.set_icon(pygame.image.load("design/icon.png"))
 pygame.init()
 
 TITLE_COLOR = (249, 231, 159)
