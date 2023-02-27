@@ -8,7 +8,7 @@ DEFAULT_COLOR = (230, 230, 230)
 
 
 def get_font(size):
-    return Font("res/ARCADE_N.TTF", size)
+    return Font("design/ARCADE_N.TTF", size)
 
 
 def draw_text(text, x, y, surface: pygame.Surface, font: pygame.font.Font, color=DEFAULT_COLOR, shadow_color=DEFAULT_COLOR, shadow_offset=0):

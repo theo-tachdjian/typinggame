@@ -4,8 +4,10 @@ import json
 import random
 import time
 
+import text
 import words
 from land_object import LandObject
+from enemy_wave import *
 
 WIDTH, HEIGHT = 800, 600
 FPS = 30
@@ -23,7 +25,8 @@ RESULT_COLOR = (236, 112, 99)
 
 
 class User:
-    def __init__(self):
+    def __init__(self, word_count=4):
+        self.word_count = word_count
         self.prompt = self.get_sentence()
         self.input = ''
         self.start_time = 0
@@ -35,29 +38,22 @@ class User:
 
     def get_sentence(self):
         data = words.liste_en_lane
-        dat = random.choices(data, k=10)
+        dat = random.choices(data, k=self.word_count)
         return ' '.join(dat)
 
-    def set_new_sentence(self):
-        self.prompt = self.get_sentence()
 
-
-def draw_text(surface, message, y_cord, font_size, color):
-    font = pygame.font.Font(None, font_size)
-    text = font.render(message, True, color)
-    text_rect = text.get_rect(center=(WIDTH / 2, y_cord))
-    surface.blit(text, text_rect)
-
-
-def draw_surface(surface):
+def draw_background(surface):
     surface.fill((90, 90, 255))
     land.render(surface, world_x)
-    draw_text(surface, 'League of Typing', 100, 60, TITLE_COLOR)
-    lis = user.prompt.split()       # convert words as a list
+    # draw_text(surface, 'League of Typing', 100, 60, TITLE_COLOR)
+
+
+def draw_text_overlay(surface):
+    lis = user.prompt.split()  # convert words as a list
     w1 = ' '.join(lis[:len(lis) // 2])
     w2 = ' '.join(lis[len(lis) // 2:])
-    draw_text(surface, w1, 200, 20, PROMPT_COLOR)
-    draw_text(surface, w2, 240, 20, PROMPT_COLOR)
+    text.draw_aligned_text(w1, surface.get_width()/2, 200, surface, text.get_font(16))
+    text.draw_aligned_text(w2, surface.get_width()/2, 240, surface, text.get_font(16))
     surface.fill((0, 0, 0), (50, 300, 700, 80))
     pygame.draw.rect(surface, RECT_COLOR, (50, 300, 700, 80), 2)
     if user.input:
@@ -65,13 +61,10 @@ def draw_surface(surface):
             lis = user.input.split()
             w1 = ' '.join(lis[:len(lis) // 2])
             w2 = ' '.join(lis[len(lis) // 2:])
-            draw_text(surface, w1, 325, 17, INPUT_COLOR)
-            draw_text(surface, w2, 355, 17, INPUT_COLOR)
+            text.draw_aligned_text(w1, WIN.get_width() / 2, 320, WIN, text.get_font(12), INPUT_COLOR)
+            text.draw_aligned_text(w2, WIN.get_width() / 2, 350, WIN, text.get_font(12), INPUT_COLOR)
         else:
-            draw_text(surface, user.input, 325, 17, INPUT_COLOR)
-    if user.end:
-        draw_text(surface, user.result, 500, 22, RESULT_COLOR)
-    pygame.display.update()
+            text.draw_aligned_text(user.input, WIN.get_width() / 2, 320, WIN, text.get_font(12), INPUT_COLOR)
 
 
 def reset_game():
@@ -82,7 +75,8 @@ def reset_game():
     user.result = ''
 
 
-def show_result():
+def defeat_wave():
+    global finished_time
     if user.timer_started and not user.end:
         user.timer_taken = time.time() - user.start_time
 
@@ -95,55 +89,109 @@ def show_result():
                 pass
 
         user.accuracy = count / len(user.prompt) * 100
-        user.wpm = len(user.input) * 60 / (5 * user.timer_taken)
+        if user.timer_taken != 0:
+            user.wpm = len(user.input) * 60 / (5 * user.timer_taken)
+        else:
+            user.wpm = len(user.input) * 60 / 5
         user.end = True
         user.result = f'Time : {round(time.time()-user.start_time)} || Accuracy : {round(user.accuracy)} || WPM : {round(user.wpm)}'
         print(user.result)
+        finished_time = time.time()
 
 
 running = True
 clock = pygame.time.Clock()
-user = User()
 
 land = LandObject()
 world_x = 0
 
+enemy_wave = EnemyWave()
+enemy_wave_cout = 1
+enemy_wave_pos_x = 700
+MAX_NEXT_WAVE_POS_X = 912
+MIN_NEXT_WAVE_POS_X = 712
+
+finished_time = 0
+TB_NEXT_WAVE = 2.0
+PLAYER_POS_X = 64
+player_health = 5
+HEART_IMG = pygame.image.load("design/heart.png")
+HEART_IMG = pygame.transform.scale(HEART_IMG, (30, 30))
+HEART_EMPTY_IMG = pygame.image.load("design/heart_empty.png")
+HEART_EMPTY_IMG = pygame.transform.scale(HEART_EMPTY_IMG, (30, 30))
+
+score = 0
+
+user = User(len(enemy_wave.enemies)*2)
+
+
+def is_wave_in_range():
+    return enemy_wave_pos_x-world_x <= PLAYER_POS_X+208
+
+
 while running:
     clock.tick(FPS)
-    draw_surface(WIN)
+
+    draw_background(WIN)
+    enemy_wave.render(WIN, enemy_wave_pos_x, world_x)
+    for i in range(player_health):
+        WIN.blit(HEART_IMG, (8+i*32, 16))
+    for i in range(5-player_health):
+        WIN.blit(HEART_EMPTY_IMG, (8 + (4 * 32)-(i*32), 16))
+    text.draw_text("Score: "+str(score), 16, 56, WIN, text.get_font(16))
+
+    if is_wave_in_range():
+        if not user.timer_started:
+            user.start_time = time.time()
+            user.timer_started = True
+
+        if user.end:
+            if user.end:
+                text.draw_aligned_text(user.result, WIN.get_width() / 2, 548, WIN, text.get_font(20))
+            if time.time() > TB_NEXT_WAVE + finished_time:
+                # spawn next wave
+                enemy_wave_cout += 1
+                score += enemy_wave.get_points()
+                # spawn Tower every 5 turns
+                if enemy_wave_cout % 5 == 0:
+                    enemy_wave = TowerWave()
+                else:
+                    enemy_wave = EnemyWave()
+
+                enemy_wave_pos_x += random.randint(MIN_NEXT_WAVE_POS_X, MAX_NEXT_WAVE_POS_X)
+                if type(enemy_wave) == TowerWave:
+                    user = User(10)
+                else:
+                    user = User(len(enemy_wave.enemies)*2)
+        else:
+            draw_text_overlay(WIN)
+    else:
+        # if not in range of wave, go forward
+        world_x += 6
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
             sys.exit()
 
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if not user.timer_started:
-                user.start_time = time.time()
-                user.timer_started = True
-            x, y = pygame.mouse.get_pos()
-            if user.end:
-                reset_game()
-        elif event.type == pygame.KEYDOWN:
-            if user.timer_started and not user.end:
-                if event.key == pygame.K_RETURN:
-                    show_result()
-                elif event.key == pygame.K_BACKSPACE:
-                    user.input = user.input[:-1]
-                elif event.key == pygame.K_RIGHT:
-                    # debug
-                    world_x += 50
-                elif event.key == pygame.K_LEFT:
-                    # debug
-                    world_x -= 50
-                else:
-                    try:
-                        user.input += event.unicode
-                    except:
-                        pass
-            if not user.timer_started and not user.end:
-                user.start_time = time.time()
-                user.timer_started = True
-                try:
-                    user.input += event.unicode
-                except:
-                    pass
+        if is_wave_in_range():
+            if event.type == pygame.KEYDOWN:
+                if user.timer_started and not user.end:
+                    if event.key == pygame.K_RETURN:
+                        defeat_wave()
+                    elif event.key == pygame.K_BACKSPACE:
+                        user.input = user.input[:-1]
+                    else:
+                        try:
+                            user.input += event.unicode
+                        except:
+                            pass
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                # debug
+                world_x += 50
+            elif event.key == pygame.K_LEFT:
+                # debug
+                world_x -= 50
+
+    pygame.display.update()
